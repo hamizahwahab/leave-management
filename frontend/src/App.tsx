@@ -6,6 +6,7 @@ import LeaveHistory from './pages/LeaveHistory';
 import MyBalances from './pages/MyBalances';
 import { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
+import PublicHolidays from './pages/PublicHolidays';
 
 // Protected Route Component
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -29,6 +30,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+
         <Route
             path="/dashboard"
             element={
@@ -37,7 +39,9 @@ function App() {
                 </PrivateRoute>
             }
         />
+
         <Route path="/" element={<Navigate to="/dashboard" />} />
+
         <Route
             path="/leave-history"
             element={
@@ -46,6 +50,7 @@ function App() {
                 </PrivateRoute>
             }
         />
+
         <Route
             path="/apply-leave"
             element={
@@ -54,11 +59,21 @@ function App() {
                 </PrivateRoute>
             }
         />
+
         <Route
             path="/my-balances"
             element={
                 <PrivateRoute>
                     <MyBalances />
+                </PrivateRoute>
+            }
+        />
+
+        <Route
+            path="/public-holidays"
+            element={
+                <PrivateRoute>
+                    <PublicHolidays />
                 </PrivateRoute>
             }
         />
