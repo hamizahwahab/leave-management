@@ -33,12 +33,23 @@ const Dashboard = () => {
                   <p className="text-gray-500 font-medium">You have 3 leave requests awaiting approval.</p>
                </div>
             </div>
-            <button
-              onClick={() => navigate('/apply-leave')}
-              className="mt-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-purple-200 transition-all flex items-center gap-2"
-            >
-              <Plus size={18} /> Apply for Leave
-            </button>
+
+            {/* Apply for Leave & View Balances Buttons */}
+            <div className="flex gap-3">
+                <button
+                onClick={() => navigate('/apply-leave')}
+                className="mt-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-purple-200 transition-all flex items-center gap-2"
+                >
+                <Plus size={18} /> Apply for Leave
+                </button>
+                <button
+                    onClick={() => navigate('/my-balances')}
+                    className="mt-2 ml-3 bg-purple-100 hover:bg-purple-200 text-purple-700 px-6 py-3 rounded-2xl font-bold transition-all"
+                >
+                    View Balances
+                </button>
+            </div>
+
           </div>
           <div className="hidden lg:block opacity-10 absolute right-10 top-0 translate-y-4">
              <Calendar size={200} strokeWidth={1} />
