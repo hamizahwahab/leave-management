@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, CheckCircle, MoreVertical, Plus, type LucideIcon } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, Plus, type LucideIcon } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import Header from '../components/Header';
 import api from '../api/axios';
@@ -18,11 +18,26 @@ interface Holiday {
     date: string;
 }
 
+interface LeaveRequest {
+    id: number;
+    start_date: string;
+    end_date: string;
+    status: string;
+    total_days: number;
+    leave_type: {
+        id: number;
+        name: string;
+    };
+    created_at: string | number | Date;
+}
+
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
     const navigate = useNavigate();
     const [holidays, setHolidays] = useState<Holiday[]>([]);
     const [currentTimestamp] = useState<number>(() => Date.now());
+    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+    const [leaveRequestsLoading, setLeaveRequestsLoading] = useState(true);
 
     useEffect(() => {
         const fetchHolidays = async () => {
@@ -35,7 +50,21 @@ const Dashboard = () => {
                 setHolidays(upcoming);
             } catch (err) { console.error(err); }
         };
+
+        const fetchLeaveRequests = async () => {
+            setLeaveRequestsLoading(true);
+            try {
+                const response = await api.get('/leave-requests');
+                const sorted = response.data.sort((a: LeaveRequest, b: LeaveRequest) =>
+                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+                setLeaveRequests(sorted.slice(0, 5));
+            } catch (err) { console.error(err); }
+            finally { setLeaveRequestsLoading(false); }
+        };
+
         fetchHolidays();
+        fetchLeaveRequests();
     }, []);
 
     const formatDate = (dateStr: string) => {
@@ -51,6 +80,12 @@ const Dashboard = () => {
         if (diff === 0) return 'Today!';
         if (diff === 1) return 'Tomorrow';
         return `${diff} days left`;
+    };
+
+    const formatPeriod = (start: string, end: string) => {
+        const s = new Date(start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const e = new Date(end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return `${s} - ${e}`;
     };
 
 
@@ -69,7 +104,9 @@ const Dashboard = () => {
                                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
                                     Welcome back, <span className="text-purple-600">{user?.name}</span>
                                 </h1>
-                                <p className="text-gray-500 font-medium">You have 3 leave requests awaiting approval.</p>
+                                <p className="text-gray-500 font-medium">
+                                    {leaveRequests.filter(r => r.status === 'pending').length} leave requests awaiting approval.
+                                </p>
                             </div>
                         </div>
 
@@ -111,22 +148,44 @@ const Dashboard = () => {
                             <h3 className="text-xl font-bold text-gray-900">Leave History</h3>
                             <button onClick={() => navigate('/leave-history')} className="text-purple-600 font-bold text-sm hover:underline">View Full Report</button>
                         </div>
+
                         <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50/50 text-gray-400 text-[11px] uppercase font-black tracking-widest">
-                                    <tr>
-                                        <th className="px-8 py-4 text-left">Type</th>
-                                        <th className="px-8 py-4 text-left">Period</th>
-                                        <th className="px-8 py-4 text-left">Status</th>
-                                        <th className="px-8 py-4 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    <TableRow type="Annual Leave" date="May 10 - 12" status="Approved" sColor="bg-purple-600" />
-                                    <TableRow type="Sick Leave" date="April 20" status="Pending" sColor="bg-orange-400" />
-                                    <TableRow type="Personal" date="March 15" status="Approved" sColor="bg-purple-600" />
-                                </tbody>
-                            </table>
+                            {leaveRequestsLoading ? (
+                                // Loading: 3 skeleton rows
+                                <div className="p-8 space-y-6">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="h-6 bg-gray-100 rounded-xl animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : leaveRequests.length === 0 ? (
+                                // Empty state
+                                <div className="text-center py-12">
+                                    <Calendar size={32} className="mx-auto text-gray-300 mb-3" />
+                                    <p className="font-bold text-gray-400">No leave requests yet.</p>
+                                </div>
+                            ) : (
+                                // Data table
+                                <table className="w-full">
+                                    <thead className="bg-gray-50/50 text-gray-400 text-[11px] uppercase font-black tracking-widest">
+                                        <tr>
+                                            <th className="px-8 py-4 text-left">Type</th>
+                                            <th className="px-8 py-4 text-left">Period</th>
+                                            <th className="px-8 py-4 text-left">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {leaveRequests.map((req) => (
+                                            <TableRow
+                                                key={req.id}
+                                                type={req.leave_type?.name || 'Leave'}
+                                                date={formatPeriod(req.start_date, req.end_date)}
+                                                status={req.status}
+                                                sColor={req.status === 'approved' ? 'bg-green-500' : req.status === 'rejected' ? 'bg-red-400' : 'bg-orange-400'}
+                                            />
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </div>
 
@@ -144,7 +203,7 @@ const Dashboard = () => {
                             <p className="text-gray-400 font-bold text-center py-8">No upcoming holidays</p>
                         ) : (
                             <div className="space-y-4">
-                                {holidays.slice(0, 5).map((holiday) => (
+                                {holidays.slice(0, 3).map((holiday) => (
                                     <div key={holiday.id} className="flex items-start gap-3 pb-4 border-b border-gray-50 last:border-0 last:pb-0">
                                         <div className="flex-1">
                                             <p className="font-bold text-gray-800">{holiday.name}</p>
@@ -189,7 +248,6 @@ const TableRow = ({ type, date, status, sColor }: { type: string; date: string; 
         <td className="px-8 py-5">
             <span className={`px-3 py-2 rounded-full text-[10px] font-black text-white uppercase ${sColor} shadow-sm`}>{status}</span>
         </td>
-        <td className="px-8 py-5 text-right"><button className="text-gray-300 hover:text-purple-600"><MoreVertical size={18} /></button></td>
     </tr>
 );
 
